@@ -1,0 +1,16 @@
+{
+  "name": "Backend Presentation",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/bun:1": {}
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "API Backend",
+      "visibility": "public"
+    }
+  },
+  "postCreateCommand": "bun install && bunx prisma generate",
+  "postAttachCommand": "bun run dev"
+}
