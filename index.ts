@@ -16,7 +16,6 @@ const prisma = new PrismaClient()
 app.use('*', cors({
   origin: [
     'http://localhost:5173',
-    'http://localhost:3000',
     'https://nama-web-kamu.vercel.app'
   ],
 

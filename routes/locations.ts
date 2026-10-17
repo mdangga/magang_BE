@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { PrismaClient } from '@prisma/client'
-import { unlink } from 'node:fs/promises'
+import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const locations = new Hono()
@@ -131,9 +131,12 @@ locations.post('/', async (c) => {
       if (file instanceof File) {
         const ext = file.name.split('.').pop()
         const filename = `location_images/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
+        const fileDir = path.join(process.cwd(), 'public', 'location_images')
         const filepath = path.join(process.cwd(), 'public', filename)
-        
-        await Bun.write(filepath, file)
+
+        await mkdir(fileDir, { recursive: true })
+        const bytes = await file.arrayBuffer()
+        await writeFile(filepath, Buffer.from(bytes))
 
         await prisma.image.create({
           data: {
@@ -147,7 +150,19 @@ locations.post('/', async (c) => {
 
     return c.json({ message: 'Location request submitted successfully.', data: location }, 201)
   } catch (error: any) {
-    return c.json({ message: 'Error creating location', error: error.message }, 500)
+    // Handle Prisma unique constraint violation
+    if (error.code === 'P2002') {
+      const target: string = (error.meta?.target as string) || ''
+      if (target.includes('nim') || target.includes('locations_nim_key')) {
+        return c.json({
+          message: 'NIM ini sudah pernah digunakan untuk mengajukan tempat magang. Setiap mahasiswa hanya diperbolehkan mengajukan satu lokasi magang.'
+        }, 409)
+      }
+      return c.json({
+        message: 'Data yang Anda masukkan sudah ada dalam sistem. Pastikan tidak ada duplikasi data.'
+      }, 409)
+    }
+    return c.json({ message: 'Terjadi kesalahan saat menyimpan pengajuan. Silakan coba lagi.', error: error.message }, 500)
   }
 })
 

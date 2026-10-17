@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { PrismaClient } from '@prisma/client'
-import { unlink } from 'node:fs/promises'
+import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 const profile = new Hono()
@@ -45,7 +45,8 @@ profile.patch('/', async (c) => {
       const filename = `logos/logo-${Date.now()}.${ext}`
       const filepath = path.join(process.cwd(), 'public', filename)
       
-      await Bun.write(filepath, logo)
+      await mkdir(path.dirname(filepath), { recursive: true })
+      await writeFile(filepath, Buffer.from(await logo.arrayBuffer()))
       updateData.logo_path = filename
     }
 
