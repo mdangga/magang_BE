@@ -70,7 +70,22 @@ locations.get('/:id', async (c) => {
         department: { 
           select: { id_department: true, name_department: true, degree_level: true, id_faculty: true, faculty: { select: { id_faculty: true, name_faculty: true } } }
         },
-        images: { select: { id_image: true, id_location: true, image_path: true, alt_text: true } }
+        images: { select: { id_image: true, id_location: true, image_path: true, alt_text: true } },
+        reports: {
+          where: { status: 'approved' },
+          select: {
+            id_report: true,
+            title: true,
+            description: true,
+            students: true,
+            file_path: true,
+            file_name: true,
+            file_size: true,
+            verified_at: true,
+            createdAt: true
+          },
+          orderBy: { createdAt: 'desc' }
+        }
       }
     })
 
@@ -185,15 +200,30 @@ locations.delete('/:id', async (c) => {
 
 // POST /api/locations/generate-link
 locations.post('/generate-link', async (c) => {
-  // In a real scenario, use JWT or store a token in DB. 
-  // For simplicity, we just generate a timestamp-based token.
   const token = Buffer.from(Date.now().toString()).toString('base64')
   
-  // Assuming frontend is running on localhost:5173 for development
-  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
-  const link = `${baseUrl}/locations/create?token=${token}`
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch (e) {
+    // empty body is ok
+  }
 
-  return c.json({ link })
+  const origin = c.req.header('origin') || c.req.header('referer')
+  let requestOrigin = ''
+  if (origin) {
+    try {
+      requestOrigin = new URL(origin).origin
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const baseUrl = body?.app_url || process.env.FRONTEND_URL || process.env.APP_URL || requestOrigin || 'http://localhost:5173'
+  const cleanBase = baseUrl.replace(/\/+$/, '')
+  const link = `${cleanBase}/locations/create?token=${token}`
+
+  return c.json({ link, token })
 })
 
 export default locations

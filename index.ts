@@ -7,17 +7,32 @@ import faculties from './routes/faculties'
 import locations from './routes/locations'
 import profile from './routes/profile'
 import auth from './routes/auth'
+import reports from './routes/reports'
 import { serveStatic } from 'hono/bun'
 
 const app = new Hono()
 const prisma = new PrismaClient()
 
-app.use('*', cors())
+app.use('*', cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://nama-web-kamu.vercel.app'
+  ],
 
-// Serve static files for location images and uploads
+  // Metode HTTP yang diizinkan
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+
+  allowHeaders: ['Content-Type', 'Authorization'],
+
+  credentials: true,
+}))
+
+// Serve static files for location images, logos, and reports uploads
 app.use('/public/*', serveStatic({ root: './' }))
 app.use('/location_images/*', serveStatic({ root: './public' }))
 app.use('/logos/*', serveStatic({ root: './public' }))
+app.use('/reports/*', serveStatic({ root: './public' }))
 app.use('/storage/*', serveStatic({ root: './public' }))
 
 app.get('/', (c) => {
@@ -30,6 +45,7 @@ app.route('/api/departments', departments)
 app.route('/api/faculties', faculties)
 app.route('/api/locations', locations)
 app.route('/api/profile', profile)
+app.route('/api/reports', reports)
 
 export { app }
 export default {

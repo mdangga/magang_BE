@@ -35,6 +35,8 @@ auth.post('/login', async (c) => {
   const payload = {
     id: user.id,
     username: user.username,
+    role: user.role || 'user',
+    name: user.name,
     exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 24 hours
   }
 
@@ -43,8 +45,66 @@ auth.post('/login', async (c) => {
   return c.json({
     message: 'Login successful',
     token,
-    user: { id: user.id, username: user.username }
+    user: { id: user.id, username: user.username, name: user.name, role: user.role || 'user' }
   })
+})
+
+// POST /api/auth/register (Sign up user baru / mahasiswa)
+auth.post('/register', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { username, name, password } = body
+
+    if (!username || !password) {
+      return c.json({ message: 'Username dan password wajib diisi' }, 400)
+    }
+
+    if (password.length < 6) {
+      return c.json({ message: 'Password minimal 6 karakter' }, 400)
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: { username }
+    })
+
+    if (existingUser) {
+      return c.json({ message: 'Username sudah digunakan, silakan pilih username lain' }, 409)
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    const newUser = await prisma.user.create({
+      data: {
+        username,
+        name: name || username,
+        password: hashedPassword,
+        role: 'user'
+      }
+    })
+
+    const payload = {
+      id: newUser.id,
+      username: newUser.username,
+      role: newUser.role,
+      name: newUser.name,
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24
+    }
+
+    const token = await sign(payload, JWT_SECRET)
+
+    return c.json({
+      message: 'Registrasi berhasil',
+      token,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        name: newUser.name,
+        role: newUser.role
+      }
+    }, 201)
+  } catch (error: any) {
+    return c.json({ message: 'Terjadi kesalahan saat registrasi', error: error.message }, 500)
+  }
 })
 
 // GET /api/auth/me (Get current user)
@@ -66,7 +126,12 @@ auth.get('/me', async (c) => {
       return c.json({ message: 'User not found' }, 404)
     }
 
-    return c.json({ id: user.id, username: user.username })
+    return c.json({
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      role: user.role || 'user'
+    })
   } catch (error) {
     return c.json({ message: 'Invalid token' }, 401)
   }

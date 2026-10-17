@@ -83,9 +83,13 @@ model Report {
   id_report     Int       @id @default(autoincrement())
   title         String
   description   String?   @db.Text
+  students      String    @db.Text
   file_path     String    @db.Text
   file_name     String?
   file_size     Int?
+  status        String    @default("pending")
+  feedback      String?   @db.Text
+  verified_at   DateTime? @db.DateTime(3)
   id_location   Int
   id_user       Int
   location      Location  @relation(fields: [id_location], references: [id_location], onDelete: Cascade)
